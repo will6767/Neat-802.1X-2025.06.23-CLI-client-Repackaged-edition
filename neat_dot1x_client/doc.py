@@ -10,7 +10,7 @@ def get_argparser():
         "-V",
         "--version",
         action="version",
-        version=f"%(prog)s {importlib.metadata.version(__package__)}",
+        version=f"neat-dot1x-cli 2025.06.23 - Repackaged edition",
     )
     parser.add_argument(
         "-v",
