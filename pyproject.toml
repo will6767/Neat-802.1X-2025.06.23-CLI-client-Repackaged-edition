@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "neat-dot1x-cli"
+version = "0.1.0"
+description = "Neat 802.1X CLI client"
+requires-python = ">=3.10"
+dependencies = [
+  "requests",
+  "cryptography",
+  "pyopenssl",
+]
+
+[tool.setuptools]
+packages = ["neat_dot1x_client"]
+
+[project.scripts]
+neat-dot1x-cli = "neat_dot1x_client.cli:cli"
