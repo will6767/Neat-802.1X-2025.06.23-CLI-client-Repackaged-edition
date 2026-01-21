@@ -1,0 +1,97 @@
+name: build
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  test:
+    name: tests (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install deps (package + test)
+        run: |
+          python -m pip install -U pip setuptools wheel
+          python -m pip install -e .
+          python -m pip install -U pytest
+
+      - name: Run tests
+        env:
+          PYTHONPATH: .
+          PYTHONUTF8: "1"
+        run: |
+          python -m pytest -q
+
+  pyinstaller:
+    name: build (${{ matrix.os }})
+    needs: test
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install deps (package + pyinstaller)
+        run: |
+          python -m pip install -U pip setuptools wheel
+          python -m pip install -U pyinstaller
+          python -m pip install -e .
+
+      - name: Create entry script
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          Path("build_entry.py").write_text(
+              "from neat_dot1x_client.cli import cli\n\n"
+              "if __name__ == '__main__':\n"
+              "    raise SystemExit(cli())\n"
+          )
+          PY
+
+      - name: Build with PyInstaller
+        run: |
+          pyinstaller --clean --noconfirm --onefile --name neat-dot1x-cli build_entry.py
+
+      - name: Smoke test
+        run: |
+          if [[ "${{ runner.os }}" == "Windows" ]]; then
+            ./dist/neat-dot1x-cli.exe --help
+          else
+            ./dist/neat-dot1x-cli --help
+          fi
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: neat-dot1x-cli-${{ runner.os }}
+          path: dist/*
